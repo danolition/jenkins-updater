@@ -1,0 +1,43 @@
+#!/bin/bash 
+
+echo "Jenkins Updater is stopping Jenkins for the update..."
+echo ""
+
+sudo systemctl stop jenkins
+cd /usr/lib/jenkins
+if [[ -L "jenkins.war" ]]; then
+    sudo unlink jenkins.war
+    echo "Unlinked outdated version of Jenkins."
+else 
+    VERSION=$(java -jar jenkins.war --version)
+	echo "Originally installed Jenkins version is ${VERSION}"
+	sudo mv jenkins.war jenkins.${VERSION}.war
+fi
+sudo -E wget -O jenkins.war https://updates.jenkins-ci.org/latest/jenkins.war
+VERSION=$(java -jar jenkins.war --version)
+echo ""
+echo "Successfully downloaded new Jenkins version $VERSION"
+sudo mv jenkins.war jenkins.${VERSION}.war
+sudo ln -s jenkins.${VERSION}.war jenkins.war
+sudo systemctl start jenkins
+echo ""
+echo "Successfully updated and restarted Jenkins $VERSION "
+cd /var/lib/jenkins  
+if [ -f jenkins-cli.jar ]; then
+    echo "Jenkins CLI has been downloaded previously!"
+else
+    echo "Jenkins CLI has not been downloaded. Downloading it..."
+	sudo wget "http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar"
+	echo "Successfully downloaded Jenkins CLI"
+fi		
+if [[ $(java -jar jenkins-cli.jar -s http://127.0.0.1:8080/ -auth user:apitokenID list-plugins | grep -e ')$' | awk '{ print $1 }') ]]; then
+    echo "There are updates for plugins available"
+	UPDATE_LIST=$( java -jar jenkins-cli.jar -s http://127.0.0.1:8080/ -auth user:apitokenID list-plugins | grep -e ')$' | awk '{ print $1 }' );
+	echo Updating Jenkins Plugins: ${UPDATE_LIST}; 
+    java -jar jenkins-cli.jar -s http://127.0.0.1:8080/ -auth user:apitokenID install-plugin ${UPDATE_LIST};
+	echo "Plugins updated. Restarting Jenkins now"
+    java -jar jenkins-cli.jar -s http://127.0.0.1:8080/ -auth user:apitokenID safe-restart;
+else
+	echo "Currently no plugin updates available!"
+    exit 0
+fi

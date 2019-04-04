@@ -1,0 +1,82 @@
+#!/bin/bash 
+
+echo "Jenkins Updater is stopping Jenkins for the update..."
+echo ""
+sudo systemctl stop jenkins
+cd /usr/lib/jenkins
+if [[ -L "/usr/lib/jenkins/jenkins.war" ]]; then
+    CURRENT_VERSION=$(java -jar /usr/lib/jenkins/jenkins.war --version);
+    sudo wget --spider --no-verbose --output-file=new_jenkins_ver https://updates.jenkins-ci.org/latest/jenkins.war
+    NEW_VERSION=$(sudo cut -c 68-72 new_jenkins_ver);
+    if [[ ${CURRENT_VERSION} == ${NEW_VERSION} ]]; then
+        echo "Newest Jenkins version already installed. No need for an update"
+        sudo rm new_jenkins_ver
+        sudo systemctl start jenkins
+        exit 0
+    else
+        sudo unlink jenkins.war
+        echo "Unlinked outdated version of Jenkins."
+        echo "Downloading newest Jenkins version..."
+        sudo wget -O jenkins.war https://updates.jenkins-ci.org/latest/jenkins.war
+        echo "Successfully downloaded new Jenkins version $NEW_VERSION"
+        sudo mv jenkins.war jenkins.${NEW_VERSION}.war
+        sudo ln -s jenkins.${NEW_VERSION}.war jenkins.war
+		sudo rm new_jenkins_ver
+        sudo systemctl start jenkins
+        echo ""
+        echo "Successfully updated and restarted Jenkins $NEW_VERSION"
+    fi
+else 
+    CURRENT_VERSION=$(java -jar /usr/lib/jenkins/jenkins.war --version);
+    echo "Originally installed Jenkins version is ${CURRENT_VERSION}"
+    if [[ ${CURRENT_VERSION} == ${NEW_VERSION} ]]; then
+        echo "Newest Jenkins version already installed. No need for an update"
+        sudo rm new_jenkins_ver
+        sudo systemctl start jenkins
+        exit 0
+    else
+        echo "Downloading newest Jenkins version..."
+        sudo wget -O jenkins.war https://updates.jenkins-ci.org/latest/jenkins.war
+        echo "Successfully downloaded new Jenkins version $NEW_VERSION"
+        sudo mv jenkins.war jenkins.${NEW_VERSION}.war
+        sudo ln -s jenkins.${NEW_VERSION}.war jenkins.war
+		sudo rm new_jenkins_ver
+        sudo systemctl start jenkins
+        echo ""
+        echo "Successfully updated and restarted Jenkins $NEW_VERSION"
+    fi
+fi
+# The line below can be used to also display the oldest war file
+# currently available and you can then extend the functionality to 
+# remove this oldest file if you really need to conserve storage space
+# OLDEST=$(ls -Art |grep jenkins.\[0-9].\[0-9][0-9][0-9]|sort -n|head -1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
